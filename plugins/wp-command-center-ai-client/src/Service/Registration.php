@@ -10,6 +10,7 @@ namespace WPCommandCenterAI\Client\Service;
 use WPCommandCenterAI\Client\Security\KeyStore;
 use WPCommandCenterAI\Client\Security\MasterKeyStore;
 use WPCommandCenterAI\Core\Logging\LoggerInterface;
+use WPCommandCenterAI\Core\Security\CryptoException;
 use WPCommandCenterAI\Core\Security\Ed25519;
 use WPCommandCenterAI\Core\Security\ProtocolMessage;
 use WP_Error;
@@ -89,7 +90,11 @@ final class Registration {
 			return new WP_Error( 'wpccai_invalid_master_proof', 'The Master registration proof is invalid.' );
 		}
 
-		$this->master_keys->trust( $response_key_id, $response_public );
+		try {
+			$this->master_keys->trust( $response_key_id, $response_public );
+		} catch ( CryptoException $exception ) {
+			return new WP_Error( 'wpccai_invalid_master_key', $exception->getMessage() );
+		}
 		update_option( 'wpccai_client_site_id', $site_id, false );
 		update_option( 'wpccai_client_master_url', $master_url, false );
 		update_option( 'wpccai_client_registered_at', time(), false );

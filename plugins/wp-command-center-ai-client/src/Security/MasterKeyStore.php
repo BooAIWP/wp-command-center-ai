@@ -7,12 +7,19 @@
 
 namespace WPCommandCenterAI\Client\Security;
 
+use WPCommandCenterAI\Core\Security\CryptoException;
+use WPCommandCenterAI\Core\Security\Ed25519;
+
 defined( 'ABSPATH' ) || exit;
 
 final class MasterKeyStore {
 	private const OPTION_NAME = 'wpccai_client_master_keys';
 
 	public function trust( string $key_id, string $public_key ): void {
+		if ( ! hash_equals( $key_id, Ed25519::key_id_from_public_key( $public_key ) ) ) {
+			throw new CryptoException( 'Master key ID does not match the public key.' );
+		}
+
 		$keys            = $this->all();
 		$keys[ $key_id ] = $public_key;
 

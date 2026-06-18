@@ -21,6 +21,11 @@ final class SecretBox {
 		self::assert_key( $encryption_key );
 
 		$payload = Base64Url::decode( $encoded );
+
+		if ( strlen( $payload ) <= SODIUM_CRYPTO_SECRETBOX_NONCEBYTES ) {
+			throw new CryptoException( 'Encrypted secret payload is invalid.' );
+		}
+
 		$nonce   = substr( $payload, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES );
 		$cipher  = substr( $payload, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES );
 		$plain   = sodium_crypto_secretbox_open( $cipher, $nonce, $encryption_key );

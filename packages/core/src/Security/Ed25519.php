@@ -63,6 +63,16 @@ final class Ed25519 {
 		return substr( hash( 'sha256', $binary_public_key ), 0, 24 );
 	}
 
+	public static function key_id_from_public_key( string $public_key ): string {
+		$decoded_key = Base64Url::decode( $public_key );
+
+		if ( SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES !== strlen( $decoded_key ) ) {
+			throw new CryptoException( 'Invalid Ed25519 public key length.' );
+		}
+
+		return self::key_id( $decoded_key );
+	}
+
 	private static function assert_available(): void {
 		if ( ! self::available() ) {
 			throw new CryptoException( 'The PHP Sodium extension is required.' );

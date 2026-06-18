@@ -67,6 +67,14 @@ final class RegistrationController implements RestRouteProviderInterface {
 			return new WP_REST_Response( array( 'message' => 'Registration data is incomplete.' ), 400 );
 		}
 
+		try {
+			if ( ! hash_equals( $key_id, Ed25519::key_id_from_public_key( $public_key ) ) ) {
+				return new WP_REST_Response( array( 'message' => 'Client key ID does not match the public key.' ), 400 );
+			}
+		} catch ( \Throwable ) {
+			return new WP_REST_Response( array( 'message' => 'Client public key is invalid.' ), 400 );
+		}
+
 		$challenge = $this->challenges->issue(
 			array(
 				'site_name'  => sanitize_text_field( (string) $request->get_param( 'site_name' ) ),

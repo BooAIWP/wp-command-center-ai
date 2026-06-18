@@ -13,6 +13,7 @@ use WPCommandCenterAI\Core\Logging\LoggerInterface;
 use WPCommandCenterAI\Core\Security\Ed25519;
 use WPCommandCenterAI\Core\Security\ProtocolMessage;
 use WPCommandCenterAI\Core\Security\RequestSignature;
+use WPCommandCenterAI\Core\Security\CryptoException;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -134,7 +135,14 @@ final class Heartbeat {
 				$current_public
 			)
 		) {
-			$this->master_keys->trust( $next_key_id, $next_public_key );
+			try {
+				$this->master_keys->trust( $next_key_id, $next_public_key );
+			} catch ( CryptoException $exception ) {
+				$this->logger->warning(
+					'Master key update was rejected: {message}.',
+					array( 'message' => $exception->getMessage() )
+				);
+			}
 		}
 	}
 }

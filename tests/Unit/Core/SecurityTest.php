@@ -26,6 +26,7 @@ final class SecurityTest extends TestCase {
 		$key_pair = Ed25519::generate_key_pair( 100 );
 		$request  = RequestSignature::create( 'POST', '/test', '{"ok":true}', $key_pair, 200, 'nonce' );
 
+		self::assertSame( $key_pair->key_id, Ed25519::key_id_from_public_key( $key_pair->public_key ) );
 		self::assertTrue( $request->verify( 'POST', '/test', '{"ok":true}', $key_pair->public_key ) );
 		self::assertFalse( $request->verify( 'POST', '/test', '{"ok":false}', $key_pair->public_key ) );
 	}
