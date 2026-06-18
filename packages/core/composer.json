@@ -1,0 +1,14 @@
+{
+  "name": "wp-command-center-ai/core",
+  "description": "A WP Command Center AI OS közös futtatási infrastruktúrája.",
+  "type": "library",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "WPCommandCenterAI\\Core\\": "src/"
+    }
+  }
+}

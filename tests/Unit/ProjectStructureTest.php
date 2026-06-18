@@ -23,6 +23,8 @@ final class ProjectStructureTest extends TestCase {
 			'client bootstrap' => array( 'plugins/wp-command-center-ai-client/wp-command-center-ai-client.php' ),
 			'master readme'    => array( 'plugins/wp-command-center-ai-master/readme.txt' ),
 			'client readme'    => array( 'plugins/wp-command-center-ai-client/readme.txt' ),
+			'core package'     => array( 'packages/core/composer.json' ),
+			'kernel'           => array( 'packages/core/src/Kernel.php' ),
 		);
 	}
 }
