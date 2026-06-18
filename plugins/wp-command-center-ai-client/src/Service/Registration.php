@@ -7,6 +7,8 @@
 
 namespace WPCommandCenterAI\Client\Service;
 
+use WPCommandCenterAI\Client\Capability\CapabilityReporter;
+use WPCommandCenterAI\Client\Capability\NegotiatedCapabilityStore;
 use WPCommandCenterAI\Client\Security\KeyStore;
 use WPCommandCenterAI\Client\Security\MasterKeyStore;
 use WPCommandCenterAI\Core\Logging\LoggerInterface;
@@ -21,6 +23,8 @@ final class Registration {
 	public function __construct(
 		private KeyStore $keys,
 		private MasterKeyStore $master_keys,
+		private CapabilityReporter $capabilities,
+		private NegotiatedCapabilityStore $negotiated,
 		private LoggerInterface $logger
 	) {
 	}
@@ -33,6 +37,7 @@ final class Registration {
 		}
 
 		$key_pair = $this->keys->current();
+		$manifest = $this->capabilities->manifest();
 		$challenge_response = $this->post(
 			$master_url . '/wp-json/wp-command-center-ai/v1/registration/challenge',
 			array(
@@ -41,6 +46,7 @@ final class Registration {
 				'site_url'         => home_url( '/' ),
 				'key_id'           => $key_pair->key_id,
 				'public_key'       => $key_pair->public_key,
+				'capabilities'     => $manifest->to_array(),
 			)
 		);
 
@@ -50,10 +56,17 @@ final class Registration {
 
 		$challenge_id = sanitize_text_field( (string) ( $challenge_response['challenge_id'] ?? '' ) );
 		$challenge    = sanitize_text_field( (string) ( $challenge_response['challenge'] ?? '' ) );
+		$challenge_capability_checksum = sanitize_text_field( (string) ( $challenge_response['capability_checksum'] ?? '' ) );
 		$master_key_id = sanitize_text_field( (string) ( $challenge_response['master_key_id'] ?? '' ) );
 		$master_public_key = sanitize_text_field( (string) ( $challenge_response['master_public_key'] ?? '' ) );
 
-		if ( '' === $challenge_id || '' === $challenge || '' === $master_key_id || '' === $master_public_key ) {
+		if (
+			'' === $challenge_id
+			|| '' === $challenge
+			|| ! hash_equals( $manifest->checksum(), $challenge_capability_checksum )
+			|| '' === $master_key_id
+			|| '' === $master_public_key
+		) {
 			return new WP_Error( 'wpccai_invalid_challenge', 'The Master returned an incomplete registration challenge.' );
 		}
 
@@ -62,7 +75,11 @@ final class Registration {
 			array(
 				'challenge_id' => $challenge_id,
 				'signature'    => Ed25519::sign(
-					ProtocolMessage::registration_challenge( $challenge_id, $challenge ),
+					ProtocolMessage::registration_challenge(
+						$challenge_id,
+						$challenge,
+						$challenge_capability_checksum
+					),
 					$key_pair->private_key
 				),
 			)
@@ -76,16 +93,25 @@ final class Registration {
 		$response_key_id  = sanitize_text_field( (string) ( $complete_response['master_key_id'] ?? '' ) );
 		$response_public  = sanitize_text_field( (string) ( $complete_response['master_public_key'] ?? '' ) );
 		$master_signature = sanitize_text_field( (string) ( $complete_response['master_signature'] ?? '' ) );
+		$accepted          = (array) ( $complete_response['capabilities'] ?? array() );
+		$capability_checksum = sanitize_text_field( (string) ( $complete_response['capability_checksum'] ?? '' ) );
 
 		if (
 			'' === $site_id
 			|| ! hash_equals( $master_key_id, $response_key_id )
 			|| ! hash_equals( $master_public_key, $response_public )
 			|| ! Ed25519::verify(
-				ProtocolMessage::registration_proof( $challenge_id, $site_id, $key_pair->key_id, $response_key_id ),
+				ProtocolMessage::registration_proof(
+					$challenge_id,
+					$site_id,
+					$key_pair->key_id,
+					$response_key_id,
+					$capability_checksum
+				),
 				$master_signature,
 				$response_public
 			)
+			|| ! $this->negotiated->store( $accepted, $capability_checksum )
 		) {
 			return new WP_Error( 'wpccai_invalid_master_proof', 'The Master registration proof is invalid.' );
 		}

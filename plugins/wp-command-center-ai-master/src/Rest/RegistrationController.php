@@ -11,11 +11,13 @@ use WPCommandCenterAI\Core\Logging\LoggerInterface;
 use WPCommandCenterAI\Core\Rest\RestRouteProviderInterface;
 use WPCommandCenterAI\Core\Security\Ed25519;
 use WPCommandCenterAI\Core\Security\ProtocolMessage;
+use WPCommandCenterAI\Master\Capability\CapabilitySynchronizer;
 use WPCommandCenterAI\Master\Client\ClientRepository;
 use WPCommandCenterAI\Master\Security\ChallengeStore;
 use WPCommandCenterAI\Master\Security\KeyStore;
 use WP_REST_Request;
 use WP_REST_Response;
+use InvalidArgumentException;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,6 +27,7 @@ final class RegistrationController implements RestRouteProviderInterface {
 	public function __construct(
 		private ChallengeStore $challenges,
 		private ClientRepository $clients,
+		private CapabilitySynchronizer $capabilities,
 		private KeyStore $keys,
 		private LoggerInterface $logger
 	) {
@@ -81,6 +84,7 @@ final class RegistrationController implements RestRouteProviderInterface {
 				'site_url'   => $site_url,
 				'key_id'     => $key_id,
 				'public_key' => $public_key,
+				'capabilities' => (array) $request->get_param( 'capabilities' ),
 			)
 		);
 		$master_key = $this->keys->current();
@@ -107,7 +111,11 @@ final class RegistrationController implements RestRouteProviderInterface {
 
 		if (
 			! Ed25519::verify(
-				ProtocolMessage::registration_challenge( $challenge_id, (string) $record['challenge'] ),
+				ProtocolMessage::registration_challenge(
+					$challenge_id,
+					(string) $record['challenge'],
+					(string) ( $record['capabilities']['checksum'] ?? '' )
+				),
 				$signature,
 				(string) $record['public_key']
 			)
@@ -115,13 +123,28 @@ final class RegistrationController implements RestRouteProviderInterface {
 			return new WP_REST_Response( array( 'message' => 'Registration challenge signature is invalid.' ), 401 );
 		}
 
+		try {
+			$evaluation = $this->capabilities->evaluate( (array) ( $record['capabilities'] ?? array() ) );
+		} catch ( InvalidArgumentException $exception ) {
+			return new WP_REST_Response( array( 'message' => $exception->getMessage() ), 400 );
+		}
+
+		if ( in_array( 'protocol.registration', $evaluation['missing'], true ) ) {
+			return new WP_REST_Response( array( 'message' => 'The client does not support the required registration capability.' ), 422 );
+		}
+
 		$client     = $this->clients->register( $record );
+		$negotiated = $this->capabilities->synchronize(
+			(string) $client['site_id'],
+			(array) ( $record['capabilities'] ?? array() )
+		);
 		$master_key = $this->keys->current();
 		$proof      = ProtocolMessage::registration_proof(
 			$challenge_id,
 			(string) $client['site_id'],
 			(string) $record['key_id'],
-			$master_key->key_id
+			$master_key->key_id,
+			(string) $negotiated['checksum']
 		);
 
 		$this->logger->notice(
@@ -136,6 +159,9 @@ final class RegistrationController implements RestRouteProviderInterface {
 				'master_public_key' => $master_key->public_key,
 				'master_signature'  => Ed25519::sign( $proof, $master_key->private_key ),
 				'rotation_due_at'   => $client['rotation_due_at'],
+				'capabilities'      => $negotiated['accepted'],
+				'missing_capabilities' => $negotiated['missing'],
+				'capability_checksum' => $negotiated['checksum'],
 			),
 			201
 		);

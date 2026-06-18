@@ -37,6 +37,8 @@ if ( file_exists( $wpccai_client_autoloader ) ) {
 	require_once WPCCAI_CLIENT_PATH . 'src/Security/KeyStore.php';
 	require_once WPCCAI_CLIENT_PATH . 'src/Security/MasterKeyStore.php';
 	require_once WPCCAI_CLIENT_PATH . 'src/Service/Registration.php';
+	require_once WPCCAI_CLIENT_PATH . 'src/Capability/CapabilityReporter.php';
+	require_once WPCCAI_CLIENT_PATH . 'src/Capability/NegotiatedCapabilityStore.php';
 	require_once WPCCAI_CLIENT_PATH . 'src/Inventory/InventoryCollector.php';
 	require_once WPCCAI_CLIENT_PATH . 'src/Module/ClientModule.php';
 	require_once WPCCAI_CLIENT_PATH . 'src/Admin/SettingsPage.php';

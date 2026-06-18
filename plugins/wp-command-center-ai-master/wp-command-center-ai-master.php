@@ -37,6 +37,9 @@ if ( file_exists( $wpccai_master_autoloader ) ) {
 	require_once WPCCAI_MASTER_PATH . 'src/Database/Schema.php';
 	require_once WPCCAI_MASTER_PATH . 'src/Database/MigrationManager.php';
 	require_once WPCCAI_MASTER_PATH . 'src/Client/ClientRepository.php';
+	require_once WPCCAI_MASTER_PATH . 'src/Capability/CapabilityPolicy.php';
+	require_once WPCCAI_MASTER_PATH . 'src/Capability/CapabilityRepository.php';
+	require_once WPCCAI_MASTER_PATH . 'src/Capability/CapabilitySynchronizer.php';
 	require_once WPCCAI_MASTER_PATH . 'src/Inventory/InventoryRepository.php';
 	require_once WPCCAI_MASTER_PATH . 'src/Inventory/InventorySynchronizer.php';
 	require_once WPCCAI_MASTER_PATH . 'src/Security/ChallengeStore.php';

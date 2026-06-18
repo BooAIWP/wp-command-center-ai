@@ -20,4 +20,27 @@ final class CapabilityNegotiator {
 
 		return $result;
 	}
+
+	public function accepted( CapabilityManifest $manifest, array $requirements ): array {
+		$accepted = array();
+
+		foreach ( $this->negotiate( $manifest, $requirements ) as $capability => $supported ) {
+			if ( $supported ) {
+				$accepted[ $capability ] = (string) $manifest->capabilities[ $capability ];
+			}
+		}
+
+		ksort( $accepted );
+
+		return $accepted;
+	}
+
+	public function missing( CapabilityManifest $manifest, array $requirements ): array {
+		return array_keys(
+			array_filter(
+				$this->negotiate( $manifest, $requirements ),
+				static fn ( bool $supported ): bool => ! $supported
+			)
+		);
+	}
 }

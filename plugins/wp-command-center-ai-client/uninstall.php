@@ -18,3 +18,4 @@ delete_option( 'wpccai_client_key_ring' );
 delete_option( 'wpccai_client_master_keys' );
 delete_option( 'wpccai_client_enrollment_token' );
 delete_option( 'wpccai_client_registered_at' );
+delete_option( 'wpccai_client_negotiated_capabilities' );

@@ -51,6 +51,8 @@ A Milestone 2 részletes technikai leírása: [`docs/MILESTONE-2.md`](docs/MILES
 
 A Milestone 3 biztonsági protokollja: [`docs/MILESTONE-3.md`](docs/MILESTONE-3.md).
 
+A Milestone 4 Capability Engine architektúrája: [`docs/MILESTONE-4-CAPABILITY-ENGINE.md`](docs/MILESTONE-4-CAPABILITY-ENGINE.md).
+
 ## Biztonsági modell
 
 A Client heartbeat kérések kliensenkénti Ed25519 kulccsal aláírtak. Az időbélyeg és az egyszer használható nonce visszajátszás-védelmet biztosít. A privát kulcsok hitelesítetten titkosítva maradnak az adott WordPress telepítésen. Távoli műveletek engedélyezése előtt továbbra is szükséges a képességalapú parancskezelés és az auditnapló megvalósítása.

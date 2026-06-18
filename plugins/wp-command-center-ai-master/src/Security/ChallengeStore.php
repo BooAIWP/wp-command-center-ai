@@ -7,6 +7,7 @@
 
 namespace WPCommandCenterAI\Master\Security;
 
+use WPCommandCenterAI\Core\Capability\CapabilityManifest;
 use WPCommandCenterAI\Core\Security\Base64Url;
 
 defined( 'ABSPATH' ) || exit;
@@ -17,12 +18,14 @@ final class ChallengeStore {
 	public function issue( array $registration ): array {
 		$challenge_id = wp_generate_uuid4();
 		$challenge    = Base64Url::encode( random_bytes( 32 ) );
+		$capabilities = CapabilityManifest::from_array( (array) ( $registration['capabilities'] ?? array() ) )->to_array();
 		$record       = array(
 			'challenge'   => $challenge,
 			'site_name'   => sanitize_text_field( (string) $registration['site_name'] ),
 			'site_url'    => esc_url_raw( (string) $registration['site_url'] ),
 			'key_id'      => sanitize_text_field( (string) $registration['key_id'] ),
 			'public_key'  => sanitize_text_field( (string) $registration['public_key'] ),
+			'capabilities' => $capabilities,
 			'expires_at'  => time() + self::LIFETIME,
 		);
 
@@ -31,6 +34,7 @@ final class ChallengeStore {
 		return array(
 			'challenge_id' => $challenge_id,
 			'challenge'    => $challenge,
+			'capability_checksum' => $capabilities['checksum'],
 			'expires_at'   => $record['expires_at'],
 		);
 	}

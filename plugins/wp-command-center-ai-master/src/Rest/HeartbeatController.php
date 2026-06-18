@@ -12,11 +12,13 @@ use WPCommandCenterAI\Core\Rest\RestRouteProviderInterface;
 use WPCommandCenterAI\Core\Security\Ed25519;
 use WPCommandCenterAI\Core\Security\ProtocolMessage;
 use WPCommandCenterAI\Master\Client\ClientRepository;
+use WPCommandCenterAI\Master\Capability\CapabilitySynchronizer;
 use WPCommandCenterAI\Master\Inventory\InventorySynchronizer;
 use WPCommandCenterAI\Master\Security\KeyStore;
 use WPCommandCenterAI\Master\Security\RequestAuthenticator;
 use WP_REST_Request;
 use WP_REST_Response;
+use InvalidArgumentException;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,6 +29,7 @@ final class HeartbeatController implements RestRouteProviderInterface {
 		private RequestAuthenticator $authenticator,
 		private ClientRepository $clients,
 		private InventorySynchronizer $inventory,
+		private CapabilitySynchronizer $capabilities,
 		private KeyStore $keys,
 		private LoggerInterface $logger
 	) {
@@ -54,6 +57,15 @@ final class HeartbeatController implements RestRouteProviderInterface {
 
 		$payload = $request->get_json_params();
 
+		try {
+			$negotiated = $this->capabilities->synchronize(
+				$site_id,
+				(array) ( $payload['capabilities'] ?? array() )
+			);
+		} catch ( InvalidArgumentException $exception ) {
+			return new WP_REST_Response( array( 'message' => $exception->getMessage() ), 400 );
+		}
+
 		if ( ! $this->clients->record_heartbeat( $site_id, $payload ) ) {
 			return new WP_REST_Response( array( 'message' => 'Unknown client.' ), 404 );
 		}
@@ -67,7 +79,8 @@ final class HeartbeatController implements RestRouteProviderInterface {
 			$site_id,
 			$nonce,
 			$server_timestamp,
-			$master_key->key_id
+			$master_key->key_id,
+			(string) $negotiated['checksum']
 		);
 		$this->logger->info(
 			'Client heartbeat accepted for {site_id}.',
@@ -80,6 +93,9 @@ final class HeartbeatController implements RestRouteProviderInterface {
 				'master_key_id'    => $master_key->key_id,
 				'signature'        => Ed25519::sign( $receipt, $master_key->private_key ),
 				'key_rotation_due' => $this->keys->rotation_due(),
+				'capabilities'     => $negotiated['accepted'],
+				'missing_capabilities' => $negotiated['missing'],
+				'capability_checksum' => $negotiated['checksum'],
 		);
 
 		if ( null !== $next_master_key ) {

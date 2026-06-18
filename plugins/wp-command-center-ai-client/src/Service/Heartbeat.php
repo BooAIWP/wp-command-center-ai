@@ -7,6 +7,8 @@
 
 namespace WPCommandCenterAI\Client\Service;
 
+use WPCommandCenterAI\Client\Capability\CapabilityReporter;
+use WPCommandCenterAI\Client\Capability\NegotiatedCapabilityStore;
 use WPCommandCenterAI\Client\Security\KeyStore;
 use WPCommandCenterAI\Client\Security\MasterKeyStore;
 use WPCommandCenterAI\Client\Inventory\InventoryCollector;
@@ -25,6 +27,8 @@ final class Heartbeat {
 		private KeyStore $keys,
 		private MasterKeyStore $master_keys,
 		private InventoryCollector $inventory,
+		private CapabilityReporter $capabilities,
+		private NegotiatedCapabilityStore $negotiated,
 		private LoggerInterface $logger
 	) {
 	}
@@ -40,6 +44,7 @@ final class Heartbeat {
 
 		$key_pair = $this->keys->current();
 		$next_key = $this->keys->prepare_rotation();
+		$manifest = $this->capabilities->manifest( $site_id );
 		$body     = (string) wp_json_encode(
 			array(
 				'site_name'       => get_bloginfo( 'name' ),
@@ -48,6 +53,7 @@ final class Heartbeat {
 				'php_version'     => PHP_VERSION,
 				'client_version'  => WPCCAI_CLIENT_VERSION,
 				'inventory'       => $this->inventory->collect(),
+				'capabilities'    => $manifest->to_array(),
 				'next_key_id'     => $next_key?->key_id,
 				'next_public_key' => $next_key?->public_key,
 			)
@@ -92,6 +98,17 @@ final class Heartbeat {
 
 		$this->accept_master_key_update( $response_body );
 
+		if (
+			! $this->negotiated->store(
+				(array) ( $response_body['capabilities'] ?? array() ),
+				sanitize_text_field( (string) ( $response_body['capability_checksum'] ?? '' ) )
+			)
+		) {
+			update_option( 'wpccai_client_last_error', 'The negotiated capability manifest is invalid.', false );
+			$this->logger->error( 'Capability negotiation verification failed.' );
+			return;
+		}
+
 		if ( null !== $next_key ) {
 			$this->keys->promote( $next_key->key_id );
 		}
@@ -108,6 +125,7 @@ final class Heartbeat {
 		$key_id    = sanitize_text_field( (string) ( $response['master_key_id'] ?? '' ) );
 		$timestamp = absint( $response['server_timestamp'] ?? 0 );
 		$signature = sanitize_text_field( (string) ( $response['signature'] ?? '' ) );
+		$capability_checksum = sanitize_text_field( (string) ( $response['capability_checksum'] ?? '' ) );
 		$public_key = $this->master_keys->find( $key_id );
 
 		if ( null === $public_key || 0 === $timestamp || abs( time() - $timestamp ) > 300 ) {
@@ -115,7 +133,7 @@ final class Heartbeat {
 		}
 
 		return Ed25519::verify(
-			ProtocolMessage::heartbeat_receipt( $site_id, $nonce, $timestamp, $key_id ),
+			ProtocolMessage::heartbeat_receipt( $site_id, $nonce, $timestamp, $key_id, $capability_checksum ),
 			$signature,
 			$public_key
 		);

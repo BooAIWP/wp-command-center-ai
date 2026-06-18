@@ -55,6 +55,22 @@ final class ClientRepository {
 			$args         = array_merge( $args, array_map( 'sanitize_title', $slugs ) );
 		}
 
+		if ( ! empty( $query->capabilities ) ) {
+			$capabilities_table = $this->schema->table( 'capabilities' );
+			$placeholders       = implode( ',', array_fill( 0, count( $query->capabilities ), '%s' ) );
+			$sql               .= " AND s.site_id IN (
+				SELECT c.site_id FROM {$capabilities_table} c
+				WHERE c.negotiated = 1 AND c.capability_id IN ({$placeholders})
+				GROUP BY c.site_id
+				HAVING COUNT(DISTINCT c.capability_id) = %d
+			)";
+			$args               = array_merge(
+				$args,
+				array_map( array( $this, 'normalize_capability_id' ), $query->capabilities )
+			);
+			$args[]             = count( array_unique( $query->capabilities ) );
+		}
+
 		$sql .= ' ORDER BY s.site_name ASC LIMIT %d OFFSET %d';
 		$args[] = max( 1, min( 10000, $query->limit ) );
 		$args[] = max( 0, $query->offset );
@@ -463,5 +479,9 @@ final class ClientRepository {
 		$timestamp = strtotime( (string) $value );
 
 		return false === $timestamp ? null : $timestamp;
+	}
+
+	private function normalize_capability_id( mixed $capability_id ): string {
+		return (string) preg_replace( '/[^a-z0-9._-]/', '', strtolower( (string) $capability_id ) );
 	}
 }

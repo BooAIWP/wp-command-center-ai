@@ -8,6 +8,8 @@
 namespace WPCommandCenterAI\Client\Module;
 
 use WPCommandCenterAI\Client\Admin\SettingsPage;
+use WPCommandCenterAI\Client\Capability\CapabilityReporter;
+use WPCommandCenterAI\Client\Capability\NegotiatedCapabilityStore;
 use WPCommandCenterAI\Client\Inventory\InventoryCollector;
 use WPCommandCenterAI\Client\Plugin;
 use WPCommandCenterAI\Client\Service\Heartbeat;
@@ -16,6 +18,8 @@ use WPCommandCenterAI\Client\Security\KeyStore;
 use WPCommandCenterAI\Client\Security\MasterKeyStore;
 use WPCommandCenterAI\Core\Capability\Capability;
 use WPCommandCenterAI\Core\Capability\CapabilityRegistry;
+use WPCommandCenterAI\Core\Capability\CapabilityDiscovery;
+use WPCommandCenterAI\Core\Capability\RequirementEvaluator;
 use WPCommandCenterAI\Core\Container\Container;
 use WPCommandCenterAI\Core\Logging\LoggerInterface;
 use WPCommandCenterAI\Core\Module\LifecycleModuleInterface;
@@ -28,6 +32,21 @@ final class ClientModule implements LifecycleModuleInterface {
 	}
 
 	public function register( Container $container ): void {
+		$container->singleton( RequirementEvaluator::class, RequirementEvaluator::class );
+		$container->singleton(
+			CapabilityDiscovery::class,
+			static fn ( Container $container ): CapabilityDiscovery => new CapabilityDiscovery(
+				$container->get( CapabilityRegistry::class ),
+				$container->get( RequirementEvaluator::class )
+			)
+		);
+		$container->singleton(
+			CapabilityReporter::class,
+			static fn ( Container $container ): CapabilityReporter => new CapabilityReporter(
+				$container->get( CapabilityDiscovery::class )
+			)
+		);
+		$container->singleton( NegotiatedCapabilityStore::class, NegotiatedCapabilityStore::class );
 		$container->singleton( InventoryCollector::class, InventoryCollector::class );
 		$container->singleton( KeyStore::class, KeyStore::class );
 		$container->singleton( MasterKeyStore::class, MasterKeyStore::class );
@@ -36,6 +55,8 @@ final class ClientModule implements LifecycleModuleInterface {
 			static fn ( Container $container ): Registration => new Registration(
 				$container->get( KeyStore::class ),
 				$container->get( MasterKeyStore::class ),
+				$container->get( CapabilityReporter::class ),
+				$container->get( NegotiatedCapabilityStore::class ),
 				$container->get( LoggerInterface::class )
 			)
 		);
@@ -52,6 +73,8 @@ final class ClientModule implements LifecycleModuleInterface {
 				$container->get( KeyStore::class ),
 				$container->get( MasterKeyStore::class ),
 				$container->get( InventoryCollector::class ),
+				$container->get( CapabilityReporter::class ),
+				$container->get( NegotiatedCapabilityStore::class ),
 				$container->get( LoggerInterface::class )
 			)
 		);
@@ -64,24 +87,51 @@ final class ClientModule implements LifecycleModuleInterface {
 		$container->get( SettingsPage::class )->register();
 		$container->get( CapabilityRegistry::class )->register(
 			new Capability(
-				'client.inventory.collect',
+				'inventory.snapshot',
 				__( 'Collect inventory', 'wp-command-center-ai-client' ),
 				__( 'Collect normalized WordPress, plugin, theme and environment inventory.', 'wp-command-center-ai-client' ),
-				array( 'version' => '1.0.0' )
+				array(
+					'version'  => '1.0.0',
+					'requires' => array(
+						'functions' => array( 'get_plugins', 'wp_get_themes' ),
+					),
+				)
 			)
 		);
 		$container->get( CapabilityRegistry::class )->register(
 			new Capability(
-				'client.register',
+				'protocol.registration',
 				__( 'Register client', 'wp-command-center-ai-client' ),
-				__( 'Register this site with a Master using challenge-response authentication.', 'wp-command-center-ai-client' )
+				__( 'Register this site with a Master using challenge-response authentication.', 'wp-command-center-ai-client' ),
+				array(
+					'version'  => '1.0.0',
+					'requires' => array( 'extensions' => array( 'sodium' ) ),
+				)
 			)
 		);
 		$container->get( CapabilityRegistry::class )->register(
 			new Capability(
-				'client.heartbeat.send',
+				'protocol.heartbeat',
 				__( 'Send heartbeat', 'wp-command-center-ai-client' ),
-				__( 'Send scheduled status reports to the Master site.', 'wp-command-center-ai-client' )
+				__( 'Send scheduled status reports to the Master site.', 'wp-command-center-ai-client' ),
+				array(
+					'version'  => '1.0.0',
+					'requires' => array(
+						'extensions' => array( 'sodium' ),
+						'functions'  => array( 'wp_remote_post' ),
+					),
+				)
+			)
+		);
+		$container->get( CapabilityRegistry::class )->register(
+			new Capability(
+				'runtime.multisite',
+				__( 'WordPress multisite', 'wp-command-center-ai-client' ),
+				__( 'Detect WordPress multisite support independently from version numbers.', 'wp-command-center-ai-client' ),
+				array(
+					'version'  => '1.0.0',
+					'requires' => array( 'flags' => array( 'multisite' ) ),
+				)
 			)
 		);
 	}

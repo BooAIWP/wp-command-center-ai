@@ -27,6 +27,8 @@ final class ProjectStructureTest extends TestCase {
 			'kernel'           => array( 'packages/core/src/Kernel.php' ),
 			'security layer'   => array( 'packages/core/src/Security/Ed25519.php' ),
 			'registration API' => array( 'plugins/wp-command-center-ai-master/src/Rest/RegistrationController.php' ),
+			'capability discovery' => array( 'packages/core/src/Capability/CapabilityDiscovery.php' ),
+			'capability persistence' => array( 'plugins/wp-command-center-ai-master/src/Capability/CapabilityRepository.php' ),
 		);
 	}
 }

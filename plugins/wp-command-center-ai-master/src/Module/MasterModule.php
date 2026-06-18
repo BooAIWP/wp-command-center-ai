@@ -9,6 +9,7 @@ namespace WPCommandCenterAI\Master\Module;
 
 use WPCommandCenterAI\Core\Capability\Capability;
 use WPCommandCenterAI\Core\Capability\CapabilityRegistry;
+use WPCommandCenterAI\Core\Capability\CapabilityNegotiator;
 use WPCommandCenterAI\Core\Container\Container;
 use WPCommandCenterAI\Core\Logging\LoggerInterface;
 use WPCommandCenterAI\Core\Inventory\InventoryNormalizer;
@@ -17,6 +18,9 @@ use WPCommandCenterAI\Core\Rest\RestApi;
 use WPCommandCenterAI\Core\Status\ClientStatusDetector;
 use WPCommandCenterAI\Master\Admin\AdminPage;
 use WPCommandCenterAI\Master\Client\ClientRepository;
+use WPCommandCenterAI\Master\Capability\CapabilityPolicy;
+use WPCommandCenterAI\Master\Capability\CapabilityRepository;
+use WPCommandCenterAI\Master\Capability\CapabilitySynchronizer;
 use WPCommandCenterAI\Master\Database\MigrationManager;
 use WPCommandCenterAI\Master\Database\Schema;
 use WPCommandCenterAI\Master\Inventory\InventoryRepository;
@@ -37,6 +41,23 @@ final class MasterModule implements LifecycleModuleInterface {
 	public function register( Container $container ): void {
 		$container->singleton( ClientStatusDetector::class, ClientStatusDetector::class );
 		$container->singleton( Schema::class, Schema::class );
+		$container->singleton( CapabilityNegotiator::class, CapabilityNegotiator::class );
+		$container->singleton( CapabilityPolicy::class, CapabilityPolicy::class );
+		$container->singleton(
+			CapabilityRepository::class,
+			static fn ( Container $container ): CapabilityRepository => new CapabilityRepository(
+				$container->get( Schema::class )
+			)
+		);
+		$container->singleton(
+			CapabilitySynchronizer::class,
+			static fn ( Container $container ): CapabilitySynchronizer => new CapabilitySynchronizer(
+				$container->get( CapabilityNegotiator::class ),
+				$container->get( CapabilityPolicy::class ),
+				$container->get( CapabilityRepository::class ),
+				$container->get( LoggerInterface::class )
+			)
+		);
 		$container->singleton( InventoryNormalizer::class, InventoryNormalizer::class );
 		$container->singleton(
 			InventoryRepository::class,
@@ -86,6 +107,7 @@ final class MasterModule implements LifecycleModuleInterface {
 			static fn ( Container $container ): RegistrationController => new RegistrationController(
 				$container->get( ChallengeStore::class ),
 				$container->get( ClientRepository::class ),
+				$container->get( CapabilitySynchronizer::class ),
 				$container->get( KeyStore::class ),
 				$container->get( LoggerInterface::class )
 			)
@@ -96,6 +118,7 @@ final class MasterModule implements LifecycleModuleInterface {
 				$container->get( RequestAuthenticator::class ),
 				$container->get( ClientRepository::class ),
 				$container->get( InventorySynchronizer::class ),
+				$container->get( CapabilitySynchronizer::class ),
 				$container->get( KeyStore::class ),
 				$container->get( LoggerInterface::class )
 			)

@@ -10,7 +10,7 @@ namespace WPCommandCenterAI\Master\Database;
 defined( 'ABSPATH' ) || exit;
 
 final class Schema {
-	public const VERSION = 2;
+	public const VERSION = 3;
 
 	public function migrate(): void {
 		global $wpdb;
@@ -24,6 +24,7 @@ final class Schema {
 		$links      = $this->table( 'fleet_site_terms' );
 		$inventory  = $this->table( 'inventory' );
 		$components = $this->table( 'inventory_components' );
+		$capabilities = $this->table( 'capabilities' );
 
 		dbDelta(
 			"CREATE TABLE {$sites} (
@@ -108,6 +109,19 @@ final class Schema {
 				PRIMARY KEY  (site_id,component_type,slug),
 				KEY component_lookup (component_type,slug),
 				KEY update_version (update_version)
+			) {$charset};"
+		);
+
+		dbDelta(
+			"CREATE TABLE {$capabilities} (
+				site_id varchar(36) NOT NULL,
+				capability_id varchar(191) NOT NULL,
+				version varchar(64) NOT NULL,
+				negotiated tinyint(1) unsigned NOT NULL DEFAULT 0,
+				reported_at bigint(20) unsigned NOT NULL,
+				PRIMARY KEY  (site_id,capability_id),
+				KEY capability_lookup (capability_id,negotiated),
+				KEY reported_at (reported_at)
 			) {$charset};"
 		);
 
