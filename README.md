@@ -8,6 +8,7 @@ A WP Command Center AI OS egy Composerrel kezelt WordPress plugin-monorepó. Ké
 ## Követelmények
 
 - PHP 8.1 vagy újabb
+- PHP Sodium kiterjesztés
 - Composer 2
 - WordPress 6.5 vagy újabb
 - HTTPS a Master és a Client webhelyek között
@@ -43,13 +44,16 @@ Helyi WordPress-fejlesztéshez másold vagy symlinkeld a kívánt plugin könyvt
 - A Master plugin hitelesített REST heartbeat végpontot és adminisztrációs felületet biztosít.
 - A Client plugin tárolja a kapcsolati beállításokat, és ütemezett heartbeat kéréseket küld a Master webhelynek.
 - A közös OS Core Kernel, szolgáltatáskonténer, eseménybusz, modulbetöltő, capability registry, REST bootstrap, naplózás és lifecycle infrastruktúrát biztosít.
+- A Master és Client challenge-response regisztrációt, Ed25519-aláírt heartbeat protokollt, replay-védelmet és kulcsrotációs alapot használ.
 - A megosztott projekt-eszköztár WordPress kódolási szabványokat, PHP-kompatibilitási ellenőrzést és PHPUnit-konfigurációt biztosít.
 
 A Milestone 2 részletes technikai leírása: [`docs/MILESTONE-2.md`](docs/MILESTONE-2.md).
 
+A Milestone 3 biztonsági protokollja: [`docs/MILESTONE-3.md`](docs/MILESTONE-3.md).
+
 ## Biztonsági modell
 
-A Client heartbeat kérések HTTPS-en keresztül küldött webhelyazonosítót és megosztott titkot használnak. A megosztott titkot jelszóként kell kezelni. Távoli műveletek engedélyezése előtt szükséges a titokrotáció, a kérésaláírás, a visszajátszás-védelem, a képességalapú parancskezelés és az auditnapló megvalósítása.
+A Client heartbeat kérések kliensenkénti Ed25519 kulccsal aláírtak. Az időbélyeg és az egyszer használható nonce visszajátszás-védelmet biztosít. A privát kulcsok hitelesítetten titkosítva maradnak az adott WordPress telepítésen. Távoli műveletek engedélyezése előtt továbbra is szükséges a képességalapú parancskezelés és az auditnapló megvalósítása.
 
 ## Licenc
 

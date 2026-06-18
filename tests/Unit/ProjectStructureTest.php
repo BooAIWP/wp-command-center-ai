@@ -25,6 +25,8 @@ final class ProjectStructureTest extends TestCase {
 			'client readme'    => array( 'plugins/wp-command-center-ai-client/readme.txt' ),
 			'core package'     => array( 'packages/core/composer.json' ),
 			'kernel'           => array( 'packages/core/src/Kernel.php' ),
+			'security layer'   => array( 'packages/core/src/Security/Ed25519.php' ),
+			'registration API' => array( 'plugins/wp-command-center-ai-master/src/Rest/RegistrationController.php' ),
 		);
 	}
 }
