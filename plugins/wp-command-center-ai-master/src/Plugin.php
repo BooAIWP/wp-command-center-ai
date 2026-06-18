@@ -1,45 +1,38 @@
 <?php
 /**
- * Master plugin bootstrap.
+ * Master plugin facade.
  *
  * @package WPCommandCenterAI\Master
  */
 
 namespace WPCommandCenterAI\Master;
 
-use WPCommandCenterAI\Master\Admin\AdminPage;
-use WPCommandCenterAI\Master\Rest\HeartbeatController;
+use WPCommandCenterAI\Core\Kernel;
+use WPCommandCenterAI\Master\Module\MasterModule;
 
 defined( 'ABSPATH' ) || exit;
 
 final class Plugin {
-	private static ?Plugin $instance = null;
+	private static ?Kernel $kernel = null;
 
-	public static function instance(): Plugin {
-		if ( null === self::$instance ) {
-			self::$instance = new self();
-		}
-
-		return self::$instance;
+	public static function boot(): void {
+		self::kernel()->boot();
 	}
 
 	public static function activate(): void {
-		if ( false === get_option( 'wpccai_master_shared_secret', false ) ) {
-			add_option( 'wpccai_master_shared_secret', wp_generate_password( 48, false, false ), '', false );
+		self::kernel()->activate();
+	}
+
+	public static function deactivate(): void {
+		self::kernel()->deactivate();
+	}
+
+	public static function kernel(): Kernel {
+		if ( null === self::$kernel ) {
+			self::$kernel = ( new Kernel( 'wpccai-master', WPCCAI_MASTER_VERSION ) )
+				->add_module( new MasterModule() );
 		}
-	}
 
-	public function boot(): void {
-		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
-		( new AdminPage() )->register();
-		( new HeartbeatController() )->register();
-	}
-
-	public function load_textdomain(): void {
-		load_plugin_textdomain(
-			'wp-command-center-ai-master',
-			false,
-			dirname( plugin_basename( WPCCAI_MASTER_FILE ) ) . '/languages'
-		);
+		return self::$kernel;
 	}
 }

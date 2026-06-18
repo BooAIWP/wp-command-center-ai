@@ -7,17 +7,18 @@
 
 namespace WPCommandCenterAI\Master\Rest;
 
+use WPCommandCenterAI\Core\Logging\LoggerInterface;
+use WPCommandCenterAI\Core\Rest\RestRouteProviderInterface;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 
 defined( 'ABSPATH' ) || exit;
 
-final class HeartbeatController {
+final class HeartbeatController implements RestRouteProviderInterface {
 	private const NAMESPACE = 'wp-command-center-ai/v1';
 
-	public function register(): void {
-		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+	public function __construct( private LoggerInterface $logger ) {
 	}
 
 	public function register_routes(): void {
@@ -65,6 +66,10 @@ final class HeartbeatController {
 		);
 
 		update_option( 'wpccai_master_clients', $clients, false );
+		$this->logger->info(
+			'Client heartbeat accepted for {site_id}.',
+			array( 'site_id' => $site_id )
+		);
 
 		return new WP_REST_Response(
 			array(
