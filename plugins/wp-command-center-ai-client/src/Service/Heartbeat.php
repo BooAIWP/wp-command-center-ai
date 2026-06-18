@@ -9,6 +9,7 @@ namespace WPCommandCenterAI\Client\Service;
 
 use WPCommandCenterAI\Client\Security\KeyStore;
 use WPCommandCenterAI\Client\Security\MasterKeyStore;
+use WPCommandCenterAI\Client\Inventory\InventoryCollector;
 use WPCommandCenterAI\Core\Logging\LoggerInterface;
 use WPCommandCenterAI\Core\Security\Ed25519;
 use WPCommandCenterAI\Core\Security\ProtocolMessage;
@@ -23,6 +24,7 @@ final class Heartbeat {
 	public function __construct(
 		private KeyStore $keys,
 		private MasterKeyStore $master_keys,
+		private InventoryCollector $inventory,
 		private LoggerInterface $logger
 	) {
 	}
@@ -45,6 +47,7 @@ final class Heartbeat {
 				'wp_version'      => get_bloginfo( 'version' ),
 				'php_version'     => PHP_VERSION,
 				'client_version'  => WPCCAI_CLIENT_VERSION,
+				'inventory'       => $this->inventory->collect(),
 				'next_key_id'     => $next_key?->key_id,
 				'next_public_key' => $next_key?->public_key,
 			)

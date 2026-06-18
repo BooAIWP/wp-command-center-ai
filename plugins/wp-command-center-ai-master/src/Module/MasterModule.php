@@ -11,6 +11,7 @@ use WPCommandCenterAI\Core\Capability\Capability;
 use WPCommandCenterAI\Core\Capability\CapabilityRegistry;
 use WPCommandCenterAI\Core\Container\Container;
 use WPCommandCenterAI\Core\Logging\LoggerInterface;
+use WPCommandCenterAI\Core\Inventory\InventoryNormalizer;
 use WPCommandCenterAI\Core\Module\LifecycleModuleInterface;
 use WPCommandCenterAI\Core\Rest\RestApi;
 use WPCommandCenterAI\Core\Status\ClientStatusDetector;
@@ -18,6 +19,8 @@ use WPCommandCenterAI\Master\Admin\AdminPage;
 use WPCommandCenterAI\Master\Client\ClientRepository;
 use WPCommandCenterAI\Master\Database\MigrationManager;
 use WPCommandCenterAI\Master\Database\Schema;
+use WPCommandCenterAI\Master\Inventory\InventoryRepository;
+use WPCommandCenterAI\Master\Inventory\InventorySynchronizer;
 use WPCommandCenterAI\Master\Rest\HeartbeatController;
 use WPCommandCenterAI\Master\Rest\RegistrationController;
 use WPCommandCenterAI\Master\Security\ChallengeStore;
@@ -34,6 +37,21 @@ final class MasterModule implements LifecycleModuleInterface {
 	public function register( Container $container ): void {
 		$container->singleton( ClientStatusDetector::class, ClientStatusDetector::class );
 		$container->singleton( Schema::class, Schema::class );
+		$container->singleton( InventoryNormalizer::class, InventoryNormalizer::class );
+		$container->singleton(
+			InventoryRepository::class,
+			static fn ( Container $container ): InventoryRepository => new InventoryRepository(
+				$container->get( Schema::class )
+			)
+		);
+		$container->singleton(
+			InventorySynchronizer::class,
+			static fn ( Container $container ): InventorySynchronizer => new InventorySynchronizer(
+				$container->get( InventoryNormalizer::class ),
+				$container->get( InventoryRepository::class ),
+				$container->get( LoggerInterface::class )
+			)
+		);
 		$container->singleton(
 			ClientRepository::class,
 			static fn ( Container $container ): ClientRepository => new ClientRepository(
@@ -77,6 +95,7 @@ final class MasterModule implements LifecycleModuleInterface {
 			static fn ( Container $container ): HeartbeatController => new HeartbeatController(
 				$container->get( RequestAuthenticator::class ),
 				$container->get( ClientRepository::class ),
+				$container->get( InventorySynchronizer::class ),
 				$container->get( KeyStore::class ),
 				$container->get( LoggerInterface::class )
 			)
@@ -97,6 +116,14 @@ final class MasterModule implements LifecycleModuleInterface {
 			$container->get( HeartbeatController::class )
 		);
 
+		$container->get( CapabilityRegistry::class )->register(
+			new Capability(
+				'master.inventory.synchronize',
+				__( 'Synchronize inventory', 'wp-command-center-ai-master' ),
+				__( 'Normalize and persist signed client inventory reports.', 'wp-command-center-ai-master' ),
+				array( 'version' => '1.0.0' )
+			)
+		);
 		$container->get( CapabilityRegistry::class )->register(
 			new Capability(
 				'master.client.register',

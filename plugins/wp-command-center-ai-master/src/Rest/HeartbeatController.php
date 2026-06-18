@@ -12,6 +12,7 @@ use WPCommandCenterAI\Core\Rest\RestRouteProviderInterface;
 use WPCommandCenterAI\Core\Security\Ed25519;
 use WPCommandCenterAI\Core\Security\ProtocolMessage;
 use WPCommandCenterAI\Master\Client\ClientRepository;
+use WPCommandCenterAI\Master\Inventory\InventorySynchronizer;
 use WPCommandCenterAI\Master\Security\KeyStore;
 use WPCommandCenterAI\Master\Security\RequestAuthenticator;
 use WP_REST_Request;
@@ -25,6 +26,7 @@ final class HeartbeatController implements RestRouteProviderInterface {
 	public function __construct(
 		private RequestAuthenticator $authenticator,
 		private ClientRepository $clients,
+		private InventorySynchronizer $inventory,
 		private KeyStore $keys,
 		private LoggerInterface $logger
 	) {
@@ -50,9 +52,13 @@ final class HeartbeatController implements RestRouteProviderInterface {
 		$site_id = sanitize_text_field( (string) $request->get_header( 'X-WPCCAI-Site-ID' ) );
 		$nonce   = sanitize_text_field( (string) $request->get_header( 'X-WPCCAI-Nonce' ) );
 
-		if ( ! $this->clients->record_heartbeat( $site_id, $request->get_json_params() ) ) {
+		$payload = $request->get_json_params();
+
+		if ( ! $this->clients->record_heartbeat( $site_id, $payload ) ) {
 			return new WP_REST_Response( array( 'message' => 'Unknown client.' ), 404 );
 		}
+
+		$this->inventory->synchronize( $site_id, (array) ( $payload['inventory'] ?? array() ) );
 
 		$master_key      = $this->keys->current();
 		$next_master_key = $this->keys->prepare_rotation();

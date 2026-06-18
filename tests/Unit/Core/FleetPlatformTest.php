@@ -38,6 +38,7 @@ final class FleetPlatformTest extends TestCase {
 		);
 
 		self::assertSame( $first->checksum, $second->checksum );
+		self::assertSame( 'a-plugin', $first->plugins[0]['slug'] );
 	}
 
 	public function test_capability_negotiation_is_version_independent(): void {

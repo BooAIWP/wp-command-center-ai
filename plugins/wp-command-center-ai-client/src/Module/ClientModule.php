@@ -8,6 +8,7 @@
 namespace WPCommandCenterAI\Client\Module;
 
 use WPCommandCenterAI\Client\Admin\SettingsPage;
+use WPCommandCenterAI\Client\Inventory\InventoryCollector;
 use WPCommandCenterAI\Client\Plugin;
 use WPCommandCenterAI\Client\Service\Heartbeat;
 use WPCommandCenterAI\Client\Service\Registration;
@@ -27,6 +28,7 @@ final class ClientModule implements LifecycleModuleInterface {
 	}
 
 	public function register( Container $container ): void {
+		$container->singleton( InventoryCollector::class, InventoryCollector::class );
 		$container->singleton( KeyStore::class, KeyStore::class );
 		$container->singleton( MasterKeyStore::class, MasterKeyStore::class );
 		$container->singleton(
@@ -49,6 +51,7 @@ final class ClientModule implements LifecycleModuleInterface {
 			static fn ( Container $container ): Heartbeat => new Heartbeat(
 				$container->get( KeyStore::class ),
 				$container->get( MasterKeyStore::class ),
+				$container->get( InventoryCollector::class ),
 				$container->get( LoggerInterface::class )
 			)
 		);
@@ -59,6 +62,14 @@ final class ClientModule implements LifecycleModuleInterface {
 		add_action( Plugin::CRON_HOOK, array( $container->get( Heartbeat::class ), 'send' ) );
 
 		$container->get( SettingsPage::class )->register();
+		$container->get( CapabilityRegistry::class )->register(
+			new Capability(
+				'client.inventory.collect',
+				__( 'Collect inventory', 'wp-command-center-ai-client' ),
+				__( 'Collect normalized WordPress, plugin, theme and environment inventory.', 'wp-command-center-ai-client' ),
+				array( 'version' => '1.0.0' )
+			)
+		);
 		$container->get( CapabilityRegistry::class )->register(
 			new Capability(
 				'client.register',
