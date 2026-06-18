@@ -1,45 +1,56 @@
-# WP Command Center AI
+# WP Command Center AI OS
 
-WP Command Center AI is a Composer-managed WordPress plugin monorepo. It contains a central **Master** plugin and a lightweight **Client** plugin for connecting managed WordPress sites.
+A WP Command Center AI OS egy Composerrel kezelt WordPress plugin-monorepó. Két önállóan telepíthető komponenst tartalmaz:
 
-## Requirements
+- **Master plugin:** központi felügyeleti és vezérlési felület.
+- **Client plugin:** a kezelt WordPress webhelyek biztonságos csatlakozója.
 
-- PHP 8.1 or newer
+## Követelmények
+
+- PHP 8.1 vagy újabb
 - Composer 2
-- WordPress 6.5 or newer
+- WordPress 6.5 vagy újabb
+- HTTPS a Master és a Client webhelyek között
 
-## Repository layout
+## Könyvtárstruktúra
 
 ```text
 plugins/
-├── wp-command-center-ai-master/  Central command-center plugin
-└── wp-command-center-ai-client/  Managed-site connector plugin
-tests/                            Shared automated tests
+├── wp-command-center-ai-master/  Központi felügyeleti plugin
+└── wp-command-center-ai-client/  Kezelt webhely csatlakozó
+tests/                            Megosztott automatizált tesztek
 ```
 
-Each plugin is independently installable and contains its own Composer package metadata, source code, assets, language directory, uninstall handler, and readme.
+Mindkét plugin saját Composer-csomagleírással, forráskóddal, nyelvi könyvtárral, eltávolítási kezelővel és WordPress readme fájllal rendelkezik.
 
-## Development
+## Fejlesztés
 
 ```bash
 composer install
 composer check
 ```
 
-Run `composer lint:fix` to automatically fix supported coding-standard violations.
+A támogatott kódstílus-hibák automatikus javítása:
 
-For local WordPress development, symlink or copy either plugin directory into `wp-content/plugins/`, then activate it in WordPress.
+```bash
+composer lint:fix
+```
 
-## Initial capabilities
+Helyi WordPress-fejlesztéshez másold vagy symlinkeld a kívánt plugin könyvtárát a `wp-content/plugins/` könyvtárba.
 
-- The Master plugin exposes an authenticated REST heartbeat endpoint and an administration dashboard.
-- The Client plugin stores connection settings and sends scheduled heartbeats to a configured Master site.
-- Shared project tooling enforces WordPress coding standards, PHP compatibility, and PHPUnit configuration.
+## Jelenlegi képességek
 
-## Security
+- A Master plugin hitelesített REST heartbeat végpontot és adminisztrációs felületet biztosít.
+- A Client plugin tárolja a kapcsolati beállításokat, és ütemezett heartbeat kéréseket küld a Master webhelynek.
+- A közös OS Core Kernel, szolgáltatáskonténer, eseménybusz, modulbetöltő, capability registry, REST bootstrap, naplózás és lifecycle infrastruktúrát biztosít.
+- A megosztott projekt-eszköztár WordPress kódolási szabványokat, PHP-kompatibilitási ellenőrzést és PHPUnit-konfigurációt biztosít.
 
-Client heartbeats use a site identifier and shared secret sent over HTTPS. Treat the shared secret like a password. Production deployments should add secret rotation, request signing, replay protection, capability-scoped commands, and an audit trail before enabling remote actions.
+A Milestone 2 részletes technikai leírása: [`docs/MILESTONE-2.md`](docs/MILESTONE-2.md).
 
-## License
+## Biztonsági modell
+
+A Client heartbeat kérések HTTPS-en keresztül küldött webhelyazonosítót és megosztott titkot használnak. A megosztott titkot jelszóként kell kezelni. Távoli műveletek engedélyezése előtt szükséges a titokrotáció, a kérésaláírás, a visszajátszás-védelem, a képességalapú parancskezelés és az auditnapló megvalósítása.
+
+## Licenc
 
 GPL-2.0-or-later.

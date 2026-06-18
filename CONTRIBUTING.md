@@ -1,11 +1,11 @@
-# Contributing
+# Közreműködés
 
-## Development workflow
+## Fejlesztési folyamat
 
-1. Create a focused branch from `main`.
-2. Install dependencies with `composer install`.
-3. Make the smallest coherent change.
-4. Run `composer check`.
-5. Open a pull request that explains the behavior change and validation performed.
+1. Hozz létre egy célzott ágat a `main` ágból.
+2. Telepítsd a függőségeket a `composer install` paranccsal.
+3. Egyetlen koherens változtatást valósíts meg.
+4. Futtasd a `composer check` parancsot.
+5. A pull requestben írd le a viselkedésváltozást és az elvégzett ellenőrzéseket.
 
-All PHP must support PHP 8.1 or newer and follow the WordPress Coding Standards.
+Minden PHP-kódnak támogatnia kell a PHP 8.1 vagy újabb verzióját, és követnie kell a WordPress Coding Standards szabályait.

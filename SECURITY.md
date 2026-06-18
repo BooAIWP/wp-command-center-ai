@@ -1,12 +1,12 @@
-# Security Policy
+# Biztonsági szabályzat
 
-## Reporting a vulnerability
+## Sérülékenység bejelentése
 
-Do not open a public issue for a suspected vulnerability. Report it privately to the repository maintainers with:
+Feltételezett sérülékenység esetén ne nyiss nyilvános hibajegyet. A problémát privát módon jelentsd a repó karbantartóinak az alábbi információkkal:
 
-- the affected plugin and version;
-- reproduction steps;
-- expected and observed behavior;
-- an assessment of impact, if known.
+- az érintett plugin és verzió;
+- reprodukciós lépések;
+- elvárt és tapasztalt működés;
+- az ismert vagy feltételezett hatás.
 
-Secrets, credentials, personal data, and production URLs must not be included in commits or public issue reports.
+Titkokat, hitelesítő adatokat, személyes adatokat és éles URL-eket tilos commitban vagy nyilvános hibajegyben elhelyezni.
