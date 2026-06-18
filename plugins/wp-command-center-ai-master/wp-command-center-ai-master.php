@@ -34,6 +34,8 @@ if ( file_exists( $wpccai_master_autoloader ) ) {
 
 	require_once $wpccai_core_bootstrap;
 	require_once WPCCAI_MASTER_PATH . 'src/Plugin.php';
+	require_once WPCCAI_MASTER_PATH . 'src/Database/Schema.php';
+	require_once WPCCAI_MASTER_PATH . 'src/Database/MigrationManager.php';
 	require_once WPCCAI_MASTER_PATH . 'src/Client/ClientRepository.php';
 	require_once WPCCAI_MASTER_PATH . 'src/Security/ChallengeStore.php';
 	require_once WPCCAI_MASTER_PATH . 'src/Security/KeyStore.php';

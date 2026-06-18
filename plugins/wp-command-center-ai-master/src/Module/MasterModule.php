@@ -16,6 +16,8 @@ use WPCommandCenterAI\Core\Rest\RestApi;
 use WPCommandCenterAI\Core\Status\ClientStatusDetector;
 use WPCommandCenterAI\Master\Admin\AdminPage;
 use WPCommandCenterAI\Master\Client\ClientRepository;
+use WPCommandCenterAI\Master\Database\MigrationManager;
+use WPCommandCenterAI\Master\Database\Schema;
 use WPCommandCenterAI\Master\Rest\HeartbeatController;
 use WPCommandCenterAI\Master\Rest\RegistrationController;
 use WPCommandCenterAI\Master\Security\ChallengeStore;
@@ -31,10 +33,19 @@ final class MasterModule implements LifecycleModuleInterface {
 
 	public function register( Container $container ): void {
 		$container->singleton( ClientStatusDetector::class, ClientStatusDetector::class );
+		$container->singleton( Schema::class, Schema::class );
 		$container->singleton(
 			ClientRepository::class,
 			static fn ( Container $container ): ClientRepository => new ClientRepository(
-				$container->get( ClientStatusDetector::class )
+				$container->get( ClientStatusDetector::class ),
+				$container->get( Schema::class )
+			)
+		);
+		$container->singleton(
+			MigrationManager::class,
+			static fn ( Container $container ): MigrationManager => new MigrationManager(
+				$container->get( Schema::class ),
+				$container->get( ClientRepository::class )
 			)
 		);
 		$container->singleton( ChallengeStore::class, ChallengeStore::class );
@@ -120,6 +131,8 @@ final class MasterModule implements LifecycleModuleInterface {
 	}
 
 	private function ensure_state( Container $container ): void {
+		$container->get( MigrationManager::class )->migrate();
+
 		if ( false === get_option( 'wpccai_master_enrollment_token', false ) ) {
 			$legacy_secret = (string) get_option( 'wpccai_master_shared_secret', '' );
 			$token         = '' !== $legacy_secret ? $legacy_secret : wp_generate_password( 48, false, false );
