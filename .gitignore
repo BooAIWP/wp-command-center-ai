@@ -1,5 +1,7 @@
 /vendor/
 /**/vendor/
+/**/node_modules/
+/**/dist/
 /build/
 /dist/
 /coverage/

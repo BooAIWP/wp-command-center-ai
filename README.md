@@ -57,6 +57,14 @@ A Milestone 4 Capability Engine architektúrája: [`docs/MILESTONE-4-CAPABILITY-
 
 A Client heartbeat kérések kliensenkénti Ed25519 kulccsal aláírtak. Az időbélyeg és az egyszer használható nonce visszajátszás-védelmet biztosít. A privát kulcsok hitelesítetten titkosítva maradnak az adott WordPress telepítésen. Távoli műveletek engedélyezése előtt továbbra is szükséges a képességalapú parancskezelés és az auditnapló megvalósítása.
 
+## MCP vezérlősík
+
+Az MCP vezérlősík dokumentációja:
+
+- [`docs/MCP-SERVER-ARCHITECTURE.md`](docs/MCP-SERVER-ARCHITECTURE.md)
+- [`docs/MCP-WORDPRESS-BOUNDARY.md`](docs/MCP-WORDPRESS-BOUNDARY.md)
+- [`docs/MCP-MIGRATION-STRATEGY.md`](docs/MCP-MIGRATION-STRATEGY.md)
+
 ## Licenc
 
 GPL-2.0-or-later.
