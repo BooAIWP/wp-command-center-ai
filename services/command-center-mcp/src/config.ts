@@ -1,6 +1,7 @@
 export type TransportMode = "stdio" | "http";
 
 export interface ServerConfig {
+  runtimeMode: string;
   transport: TransportMode;
   http: {
     host: string;
@@ -31,6 +32,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Server
   }
 
   const config: ServerConfig = {
+    runtimeMode: environment.NODE_ENV ?? "development",
     transport,
     http: {
       host: environment.WPCCAI_MCP_HOST ?? "127.0.0.1",

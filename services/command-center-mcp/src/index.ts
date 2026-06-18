@@ -1,5 +1,6 @@
 import { SERVICE_VERSION, createFleetQueryService } from "./bootstrap.js";
 import { loadConfig } from "./config.js";
+import { BUILD_ID } from "./generated/build.js";
 import { startHttpTransport } from "./transports/http.js";
 import { startStdioTransport } from "./transports/stdio.js";
 
@@ -8,7 +9,13 @@ async function main(): Promise<void> {
   const fleetQueries = createFleetQueryService(config);
 
   if (config.transport === "http") {
-    await startHttpTransport(fleetQueries, SERVICE_VERSION, config.http);
+    await startHttpTransport(
+      fleetQueries,
+      SERVICE_VERSION,
+      BUILD_ID,
+      config.runtimeMode,
+      config.http,
+    );
     return;
   }
 

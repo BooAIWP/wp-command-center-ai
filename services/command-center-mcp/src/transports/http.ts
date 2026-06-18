@@ -4,24 +4,62 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { FleetQueryService } from "../application/services/FleetQueryService.js";
 import type { ServerConfig } from "../config.js";
+import { createRuntimeHealth } from "../runtime/health.js";
 import { createMcpServer } from "../mcp/createServer.js";
 
 export async function startHttpTransport(
   fleetQueries: FleetQueryService,
   version: string,
+  build: string,
+  runtimeMode: string,
   config: ServerConfig["http"],
 ): Promise<void> {
-  const app = express();
-  const transports = new Map<string, StreamableHTTPServerTransport>();
   const bootstrapToken = config.bootstrapToken;
 
   if (bootstrapToken === undefined) {
     throw new Error("HTTP bootstrap token is required.");
   }
 
+  const app = createHttpApplication(
+    fleetQueries,
+    version,
+    build,
+    runtimeMode,
+    bootstrapToken,
+    config.allowedOrigins,
+  );
+
+  await new Promise<void>((resolve, reject) => {
+    const listener = app.listen(config.port, config.host, () => {
+      console.error(
+        `WP Command Center AI MCP listening on http://${config.host}:${config.port}/mcp`,
+      );
+      resolve();
+    });
+    listener.on("error", reject);
+  });
+}
+
+export function createHttpApplication(
+  fleetQueries: FleetQueryService,
+  version: string,
+  build: string,
+  runtimeMode: string,
+  bootstrapToken: string,
+  allowedOrigins: string[],
+) {
+  const app = express();
+  const transports = new Map<string, StreamableHTTPServerTransport>();
+
   app.use(express.json({ limit: "1mb" }));
+  app.get("/health", (_request, response) => {
+    response
+      .status(200)
+      .setHeader("Cache-Control", "no-store")
+      .json(createRuntimeHealth({ version, build, runtimeMode }));
+  });
   app.use((request, response, next) =>
-    authorize(request, response, next, bootstrapToken, config.allowedOrigins),
+    authorize(request, response, next, bootstrapToken, allowedOrigins),
   );
 
   app.post("/mcp", async (request, response) => {
@@ -65,15 +103,7 @@ export async function startHttpTransport(
     await handleExistingSession(request, response, transports);
   });
 
-  await new Promise<void>((resolve, reject) => {
-    const listener = app.listen(config.port, config.host, () => {
-      console.error(
-        `WP Command Center AI MCP listening on http://${config.host}:${config.port}/mcp`,
-      );
-      resolve();
-    });
-    listener.on("error", reject);
-  });
+  return app;
 }
 
 async function handleExistingSession(

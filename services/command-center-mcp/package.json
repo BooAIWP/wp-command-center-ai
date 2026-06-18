@@ -8,12 +8,13 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "node scripts/generate-build-metadata.mjs && tsc --project tsconfig.json",
     "check": "npm run typecheck && npm test && npm run build",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/src/index.js",
+    "verify:runtime": "bash scripts/cpanel/readiness-check.sh",
     "test": "node --import tsx --test tests/**/*.test.ts",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "node scripts/generate-build-metadata.mjs && tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",

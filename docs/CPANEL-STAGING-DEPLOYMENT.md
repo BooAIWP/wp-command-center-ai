@@ -288,3 +288,18 @@ mert a hosting nem támogat hosszú életű Node processzt.
 - hibás tokennel `401`, hibás Originnel `403` érkezik;
 - restart után a szolgáltatás automatikusan visszaáll;
 - logrotáció és visszaállítási eljárás dokumentált és kipróbált.
+
+## Végrehajtható runtime segédletek
+
+A részletes readiness checklist, deploy, rollback, restart és health-check
+eljárás itt található:
+
+[`docs/CPANEL-RUNTIME-READINESS.md`](CPANEL-RUNTIME-READINESS.md)
+
+A szerveren használható scriptek:
+
+```text
+services/command-center-mcp/scripts/cpanel/readiness-check.sh
+services/command-center-mcp/scripts/cpanel/deploy.sh
+services/command-center-mcp/scripts/cpanel/health-check.sh
+```

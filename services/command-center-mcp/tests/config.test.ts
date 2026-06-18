@@ -7,6 +7,7 @@ test("stdio is the secure default transport", () => {
 
   assert.equal(config.transport, "stdio");
   assert.equal(config.http.host, "127.0.0.1");
+  assert.equal(config.runtimeMode, "development");
 });
 
 test("HTTP transport requires a token and an origin allowlist", () => {

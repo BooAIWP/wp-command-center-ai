@@ -2,6 +2,7 @@
 /**/vendor/
 /**/node_modules/
 /**/dist/
+/**/src/generated/
 /build/
 /dist/
 /coverage/
