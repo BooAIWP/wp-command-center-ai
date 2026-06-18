@@ -96,7 +96,9 @@ final class ClientRepository {
 			}
 		}
 
-		return update_option( self::OPTION_NAME, $clients, false );
+		update_option( self::OPTION_NAME, $clients, false );
+
+		return true;
 	}
 
 	public function public_key( string $site_id, string $key_id ): ?string {

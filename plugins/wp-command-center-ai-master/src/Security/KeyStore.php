@@ -71,7 +71,7 @@ final class KeyStore {
 	public function rotate(): KeyPair {
 		$ring              = $this->load();
 		$ring['previous']  = $ring['current'] ?? null;
-		$key_pair          = null !== $this->next() ? $this->next() : Ed25519::generate_key_pair();
+		$key_pair          = $this->next() ?? Ed25519::generate_key_pair();
 		$ring['current']   = $this->serialize( $key_pair );
 		$ring['next']      = null;
 		$ring['rotated_at'] = time();
