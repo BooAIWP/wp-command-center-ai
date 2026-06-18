@@ -5,6 +5,7 @@
   "license": "GPL-2.0-or-later",
   "require": {
     "php": ">=8.1",
+    "ext-sodium": "*",
     "wp-command-center-ai/core": "dev-main"
   },
   "require-dev": {
