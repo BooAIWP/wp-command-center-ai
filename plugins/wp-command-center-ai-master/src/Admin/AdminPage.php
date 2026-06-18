@@ -74,6 +74,10 @@ final class AdminPage {
 				<strong><?php echo esc_html( number_format_i18n( $counts['offline'] ) ); ?></strong>
 				<span><?php esc_html_e( 'offline sites', 'wp-command-center-ai-master' ); ?></span>
 			</div>
+			<div class="wpccai-card">
+				<strong><?php echo esc_html( number_format_i18n( $counts['stale'] ) ); ?></strong>
+				<span><?php esc_html_e( 'stale sites', 'wp-command-center-ai-master' ); ?></span>
+			</div>
 			<h2><?php esc_html_e( 'Client connection', 'wp-command-center-ai-master' ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr>

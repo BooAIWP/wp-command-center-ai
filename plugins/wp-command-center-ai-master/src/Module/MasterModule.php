@@ -73,6 +73,7 @@ final class MasterModule implements LifecycleModuleInterface {
 	}
 
 	public function boot( Container $container ): void {
+		$this->ensure_state( $container );
 		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
 
 		$container->get( AdminPage::class )->register();
@@ -102,15 +103,7 @@ final class MasterModule implements LifecycleModuleInterface {
 	}
 
 	public function activate( Container $container ): void {
-		if ( false === get_option( 'wpccai_master_enrollment_token', false ) ) {
-			$legacy_secret = (string) get_option( 'wpccai_master_shared_secret', '' );
-			$token         = '' !== $legacy_secret ? $legacy_secret : wp_generate_password( 48, false, false );
-
-			add_option( 'wpccai_master_enrollment_token', $token, '', false );
-		}
-
-		$container->get( KeyStore::class )->current();
-		update_option( 'wpccai_master_version', WPCCAI_MASTER_VERSION, false );
+		$this->ensure_state( $container );
 		$container->get( LoggerInterface::class )->info( 'Master module activated.' );
 	}
 
@@ -124,5 +117,17 @@ final class MasterModule implements LifecycleModuleInterface {
 			false,
 			dirname( plugin_basename( WPCCAI_MASTER_FILE ) ) . '/languages'
 		);
+	}
+
+	private function ensure_state( Container $container ): void {
+		if ( false === get_option( 'wpccai_master_enrollment_token', false ) ) {
+			$legacy_secret = (string) get_option( 'wpccai_master_shared_secret', '' );
+			$token         = '' !== $legacy_secret ? $legacy_secret : wp_generate_password( 48, false, false );
+
+			add_option( 'wpccai_master_enrollment_token', $token, '', false );
+		}
+
+		$container->get( KeyStore::class )->current();
+		update_option( 'wpccai_master_version', WPCCAI_MASTER_VERSION, false );
 	}
 }

@@ -8,6 +8,7 @@
 namespace WPCommandCenterAI\Master\Client;
 
 use WPCommandCenterAI\Core\Status\ClientStatusDetector;
+use WPCommandCenterAI\Core\Security\RotationPolicy;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -41,7 +42,11 @@ final class ClientRepository {
 			'site_url'          => esc_url_raw( (string) $registration['site_url'] ),
 			'current_key_id'    => sanitize_text_field( (string) $registration['key_id'] ),
 			'public_keys'       => array(
-				sanitize_text_field( (string) $registration['key_id'] ) => sanitize_text_field( (string) $registration['public_key'] ),
+				sanitize_text_field( (string) $registration['key_id'] ) => array(
+					'public_key' => sanitize_text_field( (string) $registration['public_key'] ),
+					'created_at' => time(),
+					'retired_at' => null,
+				),
 			),
 			'registered_at'     => time(),
 			'last_seen_at'      => null,
@@ -70,9 +75,25 @@ final class ClientRepository {
 		$next_public_key = sanitize_text_field( (string) ( $report['next_public_key'] ?? '' ) );
 
 		if ( '' !== $next_key_id && '' !== $next_public_key ) {
-			$clients[ $site_id ]['public_keys'][ $next_key_id ] = $next_public_key;
-			$clients[ $site_id ]['current_key_id']              = $next_key_id;
-			$clients[ $site_id ]['rotation_due_at']             = time() + 7776000;
+			$current_key_id = (string) $clients[ $site_id ]['current_key_id'];
+
+			if ( $current_key_id !== $next_key_id ) {
+				if ( isset( $clients[ $site_id ]['public_keys'][ $current_key_id ] ) ) {
+					$current_key = $clients[ $site_id ]['public_keys'][ $current_key_id ];
+
+					if ( is_array( $current_key ) ) {
+						$clients[ $site_id ]['public_keys'][ $current_key_id ]['retired_at'] = time();
+					}
+				}
+
+				$clients[ $site_id ]['public_keys'][ $next_key_id ] = array(
+					'public_key' => $next_public_key,
+					'created_at' => time(),
+					'retired_at' => null,
+				);
+				$clients[ $site_id ]['current_key_id']              = $next_key_id;
+				$clients[ $site_id ]['rotation_due_at']             = time() + RotationPolicy::DEFAULT_INTERVAL;
+			}
 		}
 
 		return update_option( self::OPTION_NAME, $clients, false );
@@ -85,7 +106,19 @@ final class ClientRepository {
 			return null;
 		}
 
-		return (string) $client['public_keys'][ $key_id ];
+		$key = $client['public_keys'][ $key_id ];
+
+		if ( is_string( $key ) ) {
+			return $key;
+		}
+
+		$retired_at = absint( $key['retired_at'] ?? 0 );
+
+		if ( 0 !== $retired_at && ( new RotationPolicy() )->grace_expired( $retired_at ) ) {
+			return null;
+		}
+
+		return isset( $key['public_key'] ) ? (string) $key['public_key'] : null;
 	}
 
 	public function status( array $client, ?int $now = null ): string {
