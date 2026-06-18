@@ -14,3 +14,7 @@ delete_option( 'wpccai_client_last_error' );
 delete_option( 'wpccai_client_last_seen' );
 delete_option( 'wpccai_client_last_status' );
 delete_option( 'wpccai_client_version' );
+delete_option( 'wpccai_client_key_ring' );
+delete_option( 'wpccai_client_master_keys' );
+delete_option( 'wpccai_client_enrollment_token' );
+delete_option( 'wpccai_client_registered_at' );

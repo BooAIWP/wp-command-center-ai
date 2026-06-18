@@ -10,6 +10,9 @@ namespace WPCommandCenterAI\Client\Module;
 use WPCommandCenterAI\Client\Admin\SettingsPage;
 use WPCommandCenterAI\Client\Plugin;
 use WPCommandCenterAI\Client\Service\Heartbeat;
+use WPCommandCenterAI\Client\Service\Registration;
+use WPCommandCenterAI\Client\Security\KeyStore;
+use WPCommandCenterAI\Client\Security\MasterKeyStore;
 use WPCommandCenterAI\Core\Capability\Capability;
 use WPCommandCenterAI\Core\Capability\CapabilityRegistry;
 use WPCommandCenterAI\Core\Container\Container;
@@ -24,10 +27,28 @@ final class ClientModule implements LifecycleModuleInterface {
 	}
 
 	public function register( Container $container ): void {
-		$container->singleton( SettingsPage::class, SettingsPage::class );
+		$container->singleton( KeyStore::class, KeyStore::class );
+		$container->singleton( MasterKeyStore::class, MasterKeyStore::class );
+		$container->singleton(
+			Registration::class,
+			static fn ( Container $container ): Registration => new Registration(
+				$container->get( KeyStore::class ),
+				$container->get( MasterKeyStore::class ),
+				$container->get( LoggerInterface::class )
+			)
+		);
+		$container->singleton(
+			SettingsPage::class,
+			static fn ( Container $container ): SettingsPage => new SettingsPage(
+				$container->get( Registration::class ),
+				$container->get( KeyStore::class )
+			)
+		);
 		$container->singleton(
 			Heartbeat::class,
 			static fn ( Container $container ): Heartbeat => new Heartbeat(
+				$container->get( KeyStore::class ),
+				$container->get( MasterKeyStore::class ),
 				$container->get( LoggerInterface::class )
 			)
 		);
@@ -40,6 +61,13 @@ final class ClientModule implements LifecycleModuleInterface {
 		$container->get( SettingsPage::class )->register();
 		$container->get( CapabilityRegistry::class )->register(
 			new Capability(
+				'client.register',
+				__( 'Register client', 'wp-command-center-ai-client' ),
+				__( 'Register this site with a Master using challenge-response authentication.', 'wp-command-center-ai-client' )
+			)
+		);
+		$container->get( CapabilityRegistry::class )->register(
+			new Capability(
 				'client.heartbeat.send',
 				__( 'Send heartbeat', 'wp-command-center-ai-client' ),
 				__( 'Send scheduled status reports to the Master site.', 'wp-command-center-ai-client' )
@@ -48,10 +76,7 @@ final class ClientModule implements LifecycleModuleInterface {
 	}
 
 	public function activate( Container $container ): void {
-		if ( false === get_option( 'wpccai_client_site_id', false ) ) {
-			add_option( 'wpccai_client_site_id', wp_generate_uuid4(), '', false );
-		}
-
+		$container->get( KeyStore::class )->current();
 		if ( ! wp_next_scheduled( Plugin::CRON_HOOK ) ) {
 			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'hourly', Plugin::CRON_HOOK );
 		}
