@@ -10,3 +10,5 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 delete_option( 'wpccai_master_clients' );
 delete_option( 'wpccai_master_shared_secret' );
 delete_option( 'wpccai_master_version' );
+delete_option( 'wpccai_master_enrollment_token' );
+delete_option( 'wpccai_master_key_ring' );

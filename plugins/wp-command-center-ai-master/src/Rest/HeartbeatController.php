@@ -9,7 +9,11 @@ namespace WPCommandCenterAI\Master\Rest;
 
 use WPCommandCenterAI\Core\Logging\LoggerInterface;
 use WPCommandCenterAI\Core\Rest\RestRouteProviderInterface;
-use WP_Error;
+use WPCommandCenterAI\Core\Security\Ed25519;
+use WPCommandCenterAI\Core\Security\ProtocolMessage;
+use WPCommandCenterAI\Master\Client\ClientRepository;
+use WPCommandCenterAI\Master\Security\KeyStore;
+use WPCommandCenterAI\Master\Security\RequestAuthenticator;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -18,7 +22,12 @@ defined( 'ABSPATH' ) || exit;
 final class HeartbeatController implements RestRouteProviderInterface {
 	private const NAMESPACE = 'wp-command-center-ai/v1';
 
-	public function __construct( private LoggerInterface $logger ) {
+	public function __construct(
+		private RequestAuthenticator $authenticator,
+		private ClientRepository $clients,
+		private KeyStore $keys,
+		private LoggerInterface $logger
+	) {
 	}
 
 	public function register_routes(): void {
@@ -33,49 +42,53 @@ final class HeartbeatController implements RestRouteProviderInterface {
 		);
 	}
 
-	public function authorize( WP_REST_Request $request ): bool|WP_Error {
-		$provided = (string) $request->get_header( 'X-WPCCAI-Secret' );
-		$expected = (string) get_option( 'wpccai_master_shared_secret', '' );
-
-		if ( '' === $provided || '' === $expected || ! hash_equals( $expected, $provided ) ) {
-			return new WP_Error(
-				'wpccai_unauthorized',
-				__( 'Invalid command center credentials.', 'wp-command-center-ai-master' ),
-				array( 'status' => 401 )
-			);
-		}
-
-		return true;
+	public function authorize( WP_REST_Request $request ): bool|\WP_Error {
+		return $this->authenticator->authenticate( $request );
 	}
 
 	public function receive( WP_REST_Request $request ): WP_REST_Response {
-		$site_id = sanitize_key( (string) $request->get_param( 'site_id' ) );
+		$site_id = sanitize_text_field( (string) $request->get_header( 'X-WPCCAI-Site-ID' ) );
+		$nonce   = sanitize_text_field( (string) $request->get_header( 'X-WPCCAI-Nonce' ) );
 
-		if ( '' === $site_id ) {
-			return new WP_REST_Response( array( 'message' => 'site_id is required.' ), 400 );
+		if ( ! $this->clients->record_heartbeat( $site_id, $request->get_json_params() ) ) {
+			return new WP_REST_Response( array( 'message' => 'Unknown client.' ), 404 );
 		}
 
-		$clients = get_option( 'wpccai_master_clients', array() );
-		$clients = is_array( $clients ) ? $clients : array();
-
-		$clients[ $site_id ] = array(
-			'site_url'    => esc_url_raw( (string) $request->get_param( 'site_url' ) ),
-			'wp_version'  => sanitize_text_field( (string) $request->get_param( 'wp_version' ) ),
-			'php_version' => sanitize_text_field( (string) $request->get_param( 'php_version' ) ),
-			'last_seen'   => current_time( 'mysql', true ),
+		$master_key      = $this->keys->current();
+		$next_master_key = $this->keys->prepare_rotation();
+		$server_timestamp = time();
+		$receipt          = ProtocolMessage::heartbeat_receipt(
+			$site_id,
+			$nonce,
+			$server_timestamp,
+			$master_key->key_id
 		);
-
-		update_option( 'wpccai_master_clients', $clients, false );
 		$this->logger->info(
 			'Client heartbeat accepted for {site_id}.',
 			array( 'site_id' => $site_id )
 		);
 
-		return new WP_REST_Response(
-			array(
-				'accepted'  => true,
-				'server_at' => current_time( 'mysql', true ),
-			)
+		$response = array(
+				'accepted'         => true,
+				'server_timestamp' => $server_timestamp,
+				'master_key_id'    => $master_key->key_id,
+				'signature'        => Ed25519::sign( $receipt, $master_key->private_key ),
+				'key_rotation_due' => $this->keys->rotation_due(),
 		);
+
+		if ( null !== $next_master_key ) {
+			$response['next_master_key_id']     = $next_master_key->key_id;
+			$response['next_master_public_key'] = $next_master_key->public_key;
+			$response['key_update_signature']   = Ed25519::sign(
+				ProtocolMessage::key_rotation(
+					$master_key->key_id,
+					$next_master_key->key_id,
+					$next_master_key->public_key
+				),
+				$master_key->private_key
+			);
+		}
+
+		return new WP_REST_Response( $response );
 	}
 }
