@@ -24,3 +24,11 @@ test("HTTP transport requires a token and an origin allowlist", () => {
     /ALLOWED_ORIGINS/,
   );
 });
+
+test("cPanel runtime PORT is supported without overriding an explicit MCP port", () => {
+  assert.equal(loadConfig({ PORT: "9123" }).http.port, 9123);
+  assert.equal(
+    loadConfig({ PORT: "9123", WPCCAI_MCP_PORT: "8787" }).http.port,
+    8787,
+  );
+});

@@ -21,7 +21,10 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Server
     throw new Error("WPCCAI_MCP_TRANSPORT must be either stdio or http.");
   }
 
-  const port = Number.parseInt(environment.WPCCAI_MCP_PORT ?? "8787", 10);
+  const port = Number.parseInt(
+    environment.WPCCAI_MCP_PORT ?? environment.PORT ?? "8787",
+    10,
+  );
 
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
     throw new Error("WPCCAI_MCP_PORT must be a valid TCP port.");
